@@ -19,8 +19,8 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
 
-    flyway:
-      enabled: false
+  flyway:
+    enabled: false
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}

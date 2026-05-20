@@ -14,14 +14,18 @@ import java.util.UUID;
 @AllArgsConstructor
 
 @Table(name = "job_execution")
+@Entity
 
 public class JobExecution {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id ;
+    private UUID id;
 
-    private int attempt ;
+    @Column(name = "job_id", nullable = false)
+    private UUID jobId;
+
+    private int attempt;
 
     @Column(name = "worker_id")
     private String workerId ;
@@ -41,8 +45,8 @@ public class JobExecution {
     @Column (columnDefinition = "TEXT")
     private String stderr;
 
-    @Column (name = "duration_ms ")
-    private Long durationMs ;
+    @Column(name = "duration_ms")
+    private Long durationMs;
 
     @Enumerated(EnumType.STRING)
     private JobStatus status ;
