@@ -1,23 +1,23 @@
 server:
   port: ${API_SERVICE_PORT:8080}
 
+dotenv:
+  directory: ../../
+
 spring:
   application:
     name: api-service
 
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3307}/${DB_NAME:distributedjobforge}
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
+    username: ${MYSQL_USER}
+    password: ${MYSQL_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: ${JPA_SHOW_SQL:true}
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
 
   flyway:
     enabled: false
