@@ -5,6 +5,8 @@ import com.distributedjobforge.api_service.domain.Job;
 import com.distributedjobforge.api_service.domain.JobStatus;
 import com.distributedjobforge.api_service.dto.JobResponse;
 import com.distributedjobforge.api_service.dto.JobSubmitRequest;
+import com.distributedjobforge.api_service.exception.InvalidJobStateException;
+import com.distributedjobforge.api_service.exception.JobNotFoundException;
 import com.distributedjobforge.api_service.repository.JobRepo;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +38,7 @@ public class JobService {
                     request.idempotencyKey() , existingJobId);
 
             Job existingJob  = repo.findById(UUID.fromString(existingJobId))
-                    .orElseThrow(()-> new RuntimeException("Job not found for the idempotency key "));
+                    .orElseThrow(()-> new JobNotFoundException(existingJobId));
             return  JobResponse.from(existingJob);
 
         }
@@ -71,7 +73,7 @@ public class JobService {
 
     public  JobResponse getJob (UUID jobId ){
         Job job = repo.findById(jobId)
-                .orElseThrow(()-> new RuntimeException("Job not found : " + jobId));
+                .orElseThrow(()-> new JobNotFoundException(jobId));
 
         return  JobResponse.from( job);
 
@@ -81,10 +83,10 @@ public class JobService {
     @Transactional
     public  JobResponse cancelJob ( UUID jobId ){
         Job job = repo.findById(jobId)
-                .orElseThrow(()-> new RuntimeException(" Job not found:" + jobId));
+                .orElseThrow(()-> new JobNotFoundException(jobId));
 
         if ( job.getStatus() != JobStatus.PENDING && job.getStatus() != JobStatus.QUEUED) {
-            throw new RuntimeException(" Can only cancel the pending and queued jobs . current status is :" + job.getStatus());
+            throw new InvalidJobStateException(" Can only cancel the pending and queued jobs . current status is :" + job.getStatus());
         }
         job.setStatus(JobStatus.CANCELLED);
         job = repo.save(job);
