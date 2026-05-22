@@ -1,5 +1,6 @@
 package com.distributedjobforge.api_service.dto;
 
+import com.distributedjobforge.api_service.domain.Job;
 import com.distributedjobforge.api_service.domain.JobStatus;
 import com.distributedjobforge.api_service.domain.JobType;
 
@@ -26,4 +27,26 @@ public record JobResponse(
         Instant scheduledAt,
         Instant startedAt,
         Instant completedAt
-) {}
+) {
+    public static JobResponse from(Job job) {
+        return new JobResponse(
+                job.getId(),
+                job.getIdempotencyKey(),
+                job.getType(),
+                job.getStatus(),
+                job.getPriority(),
+                job.getTimeoutS(),
+                job.getMaxRetries(),
+                job.getRetryCount(),
+                job.getPayload(),
+                job.getDependsOn(),
+                job.getWorkerId(),
+                job.getErrorMessage(),
+                job.getResult(),
+                job.getCreatedAt(),
+                job.getScheduledAt(),
+                job.getStartedAt(),
+                job.getCompletedAt()
+        );
+    }
+}
