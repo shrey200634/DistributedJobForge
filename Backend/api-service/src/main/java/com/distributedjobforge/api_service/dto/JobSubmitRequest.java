@@ -2,14 +2,12 @@ package com.distributedjobforge.api_service.dto;
 
 import com.distributedjobforge.api_service.domain.JobType;
 import jakarta.validation.constraints.*;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
 
 @Builder
 public record JobSubmitRequest(
