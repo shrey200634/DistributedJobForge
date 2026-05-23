@@ -9,22 +9,20 @@ import java.util.Map;
 import java.util.UUID;
 
 public record JobPendingMessage (
-
-        String schemaVersion ,
-        UUID jobId ,
+        String schemaVersion,
+        UUID jobId,
         JobType type,
-        int priority ,
-        Map<String , Object> payload ,
-        int timeoutS ,
-        int maxRetries ,
-        int attempt ,
-        String idempotencyKey ,
-        Instant enqueuedAt ,
+        int priority,
+        Map<String, Object> payload,
+        int timeoutS,
+        int maxRetries,
+        int attempt,
+        String idempotencyKey,
+        Instant enqueuedAt,
         List<String> tags
-)
-{
-    public  JobPendingMessage from(Job job){
-        return  new JobPendingMessage(
+) {
+    public static JobPendingMessage from(Job job) {
+        return new JobPendingMessage(
                 "1.0",
                 job.getId(),
                 job.getType(),

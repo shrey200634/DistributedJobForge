@@ -7,6 +7,7 @@ import com.distributedjobforge.api_service.dto.JobResponse;
 import com.distributedjobforge.api_service.dto.JobSubmitRequest;
 import com.distributedjobforge.api_service.exception.InvalidJobStateException;
 import com.distributedjobforge.api_service.exception.JobNotFoundException;
+import com.distributedjobforge.api_service.kafka.JobEventPublisher;
 import com.distributedjobforge.api_service.repository.JobRepo;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 public class JobService {
     private final JobRepo repo ;
     private final RedissonClient redissonClient ;
+    private  final JobEventPublisher jobEventPublisher;
 
     @Transactional
     public JobResponse submitJob(JobSubmitRequest request ){
@@ -63,6 +65,10 @@ public class JobService {
 
           // now we need to stre the idempodency key in redis with 24 ttl
         bucket.set(job.getId().toString() , 24 , TimeUnit.HOURS);
+
+        if (job.getStatus() == JobStatus.PENDING){
+            jobEventPublisher.publishJobPending(job);
+        }
 
         log.info("Job created: id={}, type={}, status={}, priority={}",
                 job.getId() , job.getType() , job.getStatus() , job.getPriority());
