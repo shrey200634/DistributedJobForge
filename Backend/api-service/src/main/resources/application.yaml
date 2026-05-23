@@ -1,9 +1,6 @@
 server:
   port: ${API_SERVICE_PORT:8080}
 
-dotenv:
-  directory: ../../
-
 spring:
   application:
     name: api-service
