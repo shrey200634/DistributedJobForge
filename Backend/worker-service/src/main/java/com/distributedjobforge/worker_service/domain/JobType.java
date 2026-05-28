@@ -1,4 +1,8 @@
 package com.distributedjobforge.worker_service.domain;
 
-public class JobType {
+public enum JobType {
+
+    SHELL ,
+    HTTP ,
+    JAVA_CLASS
 }
