@@ -56,7 +56,7 @@ services:
       timeout: 10s
       retries: 10
     networks:
-      - djf-net
+      - djf-net``
 
   api-service:
     build:
