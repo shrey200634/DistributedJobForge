@@ -4,6 +4,7 @@ import com.distributedjobforge.api_service.domain.Job;
 import com.distributedjobforge.api_service.domain.JobExecution;
 import com.distributedjobforge.api_service.domain.JobStatus;
 import com.distributedjobforge.api_service.exception.JobNotFoundException;
+import com.distributedjobforge.api_service.kafka.JobEventPublisher;
 import com.distributedjobforge.api_service.kafka.JobResultMessage;
 import com.distributedjobforge.api_service.repository.JobExecutionRepo;
 import com.distributedjobforge.api_service.repository.JobRepo;
@@ -17,62 +18,94 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class JobResultProcessor {
 
-    private final JobRepo jobRepo ;
-    private final JobExecutionRepo jobExecutionRepo ;
+    private final JobRepo jobRepo;
+    private final JobExecutionRepo jobExecutionRepo;
+    private final RetryService retryService;
+    private final JobEventPublisher jobEventPublisher;
 
     @Transactional
-    public  void processResult (JobResultMessage resultMessage){
-        // find the job
+    public void processResult(JobResultMessage resultMessage) {
         Job job = jobRepo.findById(resultMessage.jobId())
-                .orElseThrow(()-> new JobNotFoundException(resultMessage.jobId()));
+                .orElseThrow(() -> new JobNotFoundException(resultMessage.jobId()));
 
         log.info("Processing result for jobId={}, status={}, workerId={}",
                 resultMessage.jobId(), resultMessage.status(), resultMessage.workerId());
 
-        //update the entity with execution outcome
+        // Always write an audit record for THIS execution attempt
+        recordExecution(resultMessage);
 
-        job.setStatus(resultMessage.status());
+        // Common fields
         job.setWorkerId(resultMessage.workerId());
         job.setStartedAt(resultMessage.startedAt());
         job.setCompletedAt(resultMessage.completedAt());
-        job.setRetryCount(resultMessage.attempt());
 
-        if (resultMessage.status() == JobStatus.FAILED || resultMessage.status()==JobStatus.TIMEOUT){
-            job.setErrorMessage(resultMessage.errorMessage());
+        boolean failed = resultMessage.status() == JobStatus.FAILED
+                || resultMessage.status() == JobStatus.TIMEOUT;
+
+        if (!failed) {
+            // SUCCESS path
+            job.setStatus(resultMessage.status());
+            job.setRetryCount(resultMessage.attempt());
+            storeResultPayload(job, resultMessage);
+            jobRepo.save(job);
+            log.info("Job {} SUCCEEDED on attempt {}", job.getId(), resultMessage.attempt());
+            return;
         }
 
-        // Store stdout/stderr in result JSON (for SUCCEEDED jobs)
-        if (resultMessage.stdout() != null || resultMessage.stderr() != null) {
+        // FAILURE path → decide retry vs DLQ
+        job.setErrorMessage(resultMessage.errorMessage());
+
+        boolean willRetry = retryService.scheduleRetryIfPossible(
+                job.getId().toString(),
+                resultMessage.attempt(),
+                job.getMaxRetries()
+        );
+
+        if (willRetry) {
+            job.setStatus(JobStatus.RETRYING);
+            job.setRetryCount(resultMessage.attempt() + 1);
+            jobRepo.save(job);
+            log.info("Job {} marked RETRYING (attempt {} of {})",
+                    job.getId(), resultMessage.attempt() + 1, job.getMaxRetries());
+        } else {
+            // Retries exhausted → DLQ
+            job.setStatus(JobStatus.DLQ);
+            job.setRetryCount(resultMessage.attempt());
+            jobRepo.save(job);
+
+            jobEventPublisher.publishToDlq(
+                    job,
+                    resultMessage.attempt(),
+                    resultMessage.errorMessage()
+            );
+            log.warn("Job {} sent to DLQ after {} attempts", job.getId(), resultMessage.attempt());
+        }
+    }
+
+    private void storeResultPayload(Job job, JobResultMessage r) {
+        if (r.stdout() != null || r.stderr() != null) {
             job.setResult(java.util.Map.of(
-                    "stdout", resultMessage.stdout() != null ? resultMessage.stdout() : "",
-                    "stderr", resultMessage.stderr() != null ? resultMessage.stderr() : "",
-                    "exitCode", resultMessage.exitCode() != null ? resultMessage.exitCode() : -1,
-                    "durationMs", resultMessage.durationMs() != null ? resultMessage.durationMs() : 0L
+                    "stdout", r.stdout() != null ? r.stdout() : "",
+                    "stderr", r.stderr() != null ? r.stderr() : "",
+                    "exitCode", r.exitCode() != null ? r.exitCode() : -1,
+                    "durationMs", r.durationMs() != null ? r.durationMs() : 0L
             ));
         }
+    }
 
-        jobRepo.save(job);
-
-        //create a JobExecution  audit record
-        JobExecution execution =JobExecution.builder()
-                .jobId(resultMessage.jobId())
-                .attempt(resultMessage.attempt())
-                .workerId(resultMessage.workerId())
-                .startedAt(resultMessage.startedAt())
-                .endAt(resultMessage.completedAt())
-                .exitCode(resultMessage.exitCode())
-                .stdout(resultMessage.stdout())
-                .stderr(resultMessage.stderr())
-                .durationMs(resultMessage.durationMs())
-                .status(resultMessage.status())
+    private void recordExecution(JobResultMessage r) {
+        JobExecution execution = JobExecution.builder()
+                .jobId(r.jobId())
+                .attempt(r.attempt())
+                .workerId(r.workerId())
+                .startedAt(r.startedAt())
+                .endAt(r.completedAt())
+                .exitCode(r.exitCode())
+                .stdout(r.stdout())
+                .stderr(r.stderr())
+                .durationMs(r.durationMs())
+                .status(r.status())
                 .build();
-
         jobExecutionRepo.save(execution);
-
-        log.info("Job {} updated: status={}, attempt={}, durationMs={}",
-                resultMessage.jobId(), resultMessage.status(), resultMessage.attempt(), resultMessage.durationMs());
-
-
-
     }
 }
