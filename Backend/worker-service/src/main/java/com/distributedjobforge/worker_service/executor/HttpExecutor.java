@@ -104,6 +104,13 @@ public class HttpExecutor {
         } catch (Exception e) {
             future.cancel(true);
             Throwable cause = (e.getCause() != null) ? e.getCause() : e;
+
+            if (cause instanceof java.net.http.HttpTimeoutException) {
+                log.warn("HTTP job {} timed out after {}s", jobId, timeoutSeconds);
+                return ExecutionResult.timeout("", "Request exceeded timeout", startedAt, Instant.now());
+            }
+
+
             log.error("HTTP job {} failed: {}", jobId, cause.getMessage());
             return ExecutionResult.failure(
                     -1, "", cause.getMessage(),
