@@ -21,18 +21,18 @@ public class JobResultProcessor {
     private final JobExecutionRepo jobExecutionRepo ;
 
     @Transactional
-    private void processResult (JobResultMessage resultMessage){
+    public  void processResult (JobResultMessage resultMessage){
         // find the job
         Job job = jobRepo.findById(resultMessage.jobId())
                 .orElseThrow(()-> new JobNotFoundException(resultMessage.jobId()));
 
         log.info("Processing result for jobId={}, status={}, workerId={}",
-                resultMessage.jobId(), resultMessage.status(), resultMessage.workerID());
+                resultMessage.jobId(), resultMessage.status(), resultMessage.workerId());
 
         //update the entity with execution outcome
 
         job.setStatus(resultMessage.status());
-        job.setWorkerId(resultMessage.workerID());
+        job.setWorkerId(resultMessage.workerId());
         job.setStartedAt(resultMessage.startedAt());
         job.setCompletedAt(resultMessage.completedAt());
         job.setRetryCount(resultMessage.attempt());
@@ -57,7 +57,7 @@ public class JobResultProcessor {
         JobExecution execution =JobExecution.builder()
                 .jobId(resultMessage.jobId())
                 .attempt(resultMessage.attempt())
-                .workerId(resultMessage.workerID())
+                .workerId(resultMessage.workerId())
                 .startedAt(resultMessage.startedAt())
                 .endAt(resultMessage.completedAt())
                 .exitCode(resultMessage.exitCode())

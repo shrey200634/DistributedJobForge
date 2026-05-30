@@ -10,7 +10,7 @@ import java.util.UUID;
 public record JobResultMessage (
         String schemaVersion ,
         UUID jobId ,
-        String workerID ,
+        String workerId ,
         int attempt ,
         JobStatus status ,
         Instant startedAt ,
