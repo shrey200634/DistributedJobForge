@@ -76,6 +76,8 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       API_SERVICE_PORT: 8080
       JPA_SHOW_SQL: "false"
+      DLQ_WEBHOOK_URL: ${DLQ_WEBHOOK_URL:-}
+      DLQ_WEBHOOK_ENABLED: ${DLQ_WEBHOOK_ENABLED:-true}
     depends_on:
       mysql:
         condition: service_healthy

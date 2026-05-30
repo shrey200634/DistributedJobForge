@@ -37,3 +37,9 @@ spring:
 redis:
   host: ${REDIS_HOST:localhost}
   port: ${REDIS_PORT:6379}
+
+djf:
+  dlq:
+    webhook-url: ${DLQ_WEBHOOK_URL:}
+    webhook-enabled: ${DLQ_WEBHOOK_ENABLED:true}
+
