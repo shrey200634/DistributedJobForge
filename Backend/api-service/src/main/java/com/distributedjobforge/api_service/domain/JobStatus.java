@@ -10,5 +10,6 @@ public  enum JobStatus{
     RETRYING ,
     DLQ ,
     CANCELLED ,
-    BLOCKED
+    BLOCKED,
+    TIMEOUT
 }
