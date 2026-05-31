@@ -20,10 +20,11 @@ public class RetryService {
     private final RedissonClient redissonClient;
 
 
-    public boolean scheduleRetryIfPossible(String jobId, int currentAttempt, int maxRetries) {
+    public RetryDecision scheduleRetryIfPossible(String jobId, int currentAttempt, int maxRetries) {
         RAtomicLong retryCount = redissonClient.getAtomicLong("jobs:retry_count:" + jobId);
 
         // increment attempt counter (durable in Redis, 7d TTL per doc §4.3)
+        // This is the AUTHORITATIVE attempt count — the DB mirrors this value.
         long attempt = retryCount.incrementAndGet();
         retryCount.expire(7, TimeUnit.DAYS);
 
@@ -31,7 +32,7 @@ public class RetryService {
             log.warn("Job {} exhausted retries (attempt={}, maxRetries={}) -> DLQ",
                     jobId, attempt, maxRetries);
             retryCount.delete();
-            return false;
+            return new RetryDecision(false, attempt);
         }
 
         // Exponential backoff with jitter
@@ -47,8 +48,11 @@ public class RetryService {
 
         log.info("Job {} scheduled for retry: attempt={}, delay={}s, readyAt={}",
                 jobId, attempt, delaySeconds, readyAtEpochMs);
-        return true;
+        return new RetryDecision(true, attempt);
     }
+
+    /** Result of a retry decision. attempt = authoritative Redis attempt count. */
+    public record RetryDecision(boolean willRetry, long attempt) {}
 
     /** Current attempt number for a job (0 if none recorded). */
     public long getAttempt(String jobId) {

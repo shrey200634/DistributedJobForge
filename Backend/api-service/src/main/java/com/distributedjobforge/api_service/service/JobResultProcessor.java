@@ -55,30 +55,34 @@ public class JobResultProcessor {
         // FAILURE path → decide retry vs DLQ
         job.setErrorMessage(resultMessage.errorMessage());
 
-        boolean willRetry = retryService.scheduleRetryIfPossible(
+        RetryService.RetryDecision decision = retryService.scheduleRetryIfPossible(
                 job.getId().toString(),
                 resultMessage.attempt(),
                 job.getMaxRetries()
         );
 
-        if (willRetry) {
+        // The Redis counter is authoritative — mirror it into the DB so the
+        // API response reflects the true attempt number.
+        int authoritativeAttempt = (int) decision.attempt();
+
+        if (decision.willRetry()) {
             job.setStatus(JobStatus.RETRYING);
-            job.setRetryCount(resultMessage.attempt() + 1);
+            job.setRetryCount(authoritativeAttempt);
             jobRepo.save(job);
             log.info("Job {} marked RETRYING (attempt {} of {})",
-                    job.getId(), resultMessage.attempt() + 1, job.getMaxRetries());
+                    job.getId(), authoritativeAttempt, job.getMaxRetries());
         } else {
             // Retries exhausted → DLQ
             job.setStatus(JobStatus.DLQ);
-            job.setRetryCount(resultMessage.attempt());
+            job.setRetryCount(authoritativeAttempt);
             jobRepo.save(job);
 
             jobEventPublisher.publishToDlq(
                     job,
-                    resultMessage.attempt(),
+                    authoritativeAttempt,
                     resultMessage.errorMessage()
             );
-            log.warn("Job {} sent to DLQ after {} attempts", job.getId(), resultMessage.attempt());
+            log.warn("Job {} sent to DLQ after {} attempts", job.getId(), authoritativeAttempt);
         }
     }
 

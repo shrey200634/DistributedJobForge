@@ -4,6 +4,7 @@ package com.distributedjobforge.worker_service.kafka;
 import com.distributedjobforge.worker_service.domain.JobType;
 import com.distributedjobforge.worker_service.executor.ExecutionResult;
 import com.distributedjobforge.worker_service.executor.HttpExecutor;
+import com.distributedjobforge.worker_service.executor.JavaClassExecutor;
 import com.distributedjobforge.worker_service.executor.ShellExecutor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,7 @@ public class WorkerKakfaConsumer {
 
     private final ShellExecutor shellExecutor;
     private final HttpExecutor httpExecutor;
+    private final JavaClassExecutor javaClassExecutor;
     private final ResultPublisher resultPublisher;
 
     @Value("${worker.id:worker-local}")
@@ -95,8 +97,14 @@ public class WorkerKakfaConsumer {
                     message.payload(),
                     message.timeoutS()
             );
+        } else if (message.type() == JobType.JAVA_CLASS) {
+            return javaClassExecutor.execute(
+                    message.jobId(),
+                    message.payload(),
+                    message.timeoutS()
+            );
         }
-        // JAVA_CLASS executor comes next (Phase 2 Step 4)
+        // All known types handled above
         throw new UnsupportedOperationException(
                 "Executor not yet implemented for type: " + message.type()
         );

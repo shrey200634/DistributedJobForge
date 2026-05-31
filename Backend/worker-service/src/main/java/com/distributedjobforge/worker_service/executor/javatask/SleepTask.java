@@ -1,12 +1,22 @@
 package com.distributedjobforge.worker_service.executor.javatask;
 
+import org.springframework.stereotype.Component;
+
 import java.util.Map;
 
-public class SleepTask implements JavaTask{
+/**
+ * Sleeps for a given number of seconds, then returns.
+ * Payload args: { "seconds": <int> }   e.g. {"seconds": 2}
+ *
+ * Deliberately slow — used to prove the JAVA_CLASS timeout path works
+ * (submit a sleep longer than the job's timeoutS).
+ */
+@Component
+public class SleepTask implements JavaTask {
 
     @Override
-    public String name (){
-        return "sleep ";
+    public String name() {
+        return "sleep";
     }
 
     @Override
