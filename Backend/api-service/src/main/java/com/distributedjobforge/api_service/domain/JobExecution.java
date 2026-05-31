@@ -49,6 +49,7 @@ public class JobExecution {
     private Long durationMs;
 
     @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "varchar(32)")
     private JobStatus status ;
 
 }
