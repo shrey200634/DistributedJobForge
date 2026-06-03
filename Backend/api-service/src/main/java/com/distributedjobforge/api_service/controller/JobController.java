@@ -1,6 +1,7 @@
 package com.distributedjobforge.api_service.controller;
 
 
+import com.distributedjobforge.api_service.dto.BatchJobSubmitRequest;
 import com.distributedjobforge.api_service.dto.JobResponse;
 import com.distributedjobforge.api_service.dto.JobSubmitRequest;
 import com.distributedjobforge.api_service.service.JobService;
@@ -11,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -42,5 +44,10 @@ public class JobController {
         JobResponse response = jobService.cancelJob(jobId);
         return ResponseEntity.ok(response);
 
+    }
+
+    @PostMapping("/batch")
+    public  ResponseEntity<List<JobResponse>> submitBatch (@RequestBody BatchJobSubmitRequest request){
+        return ResponseEntity.ok(jobService.submitBatch(request));
     }
 }
