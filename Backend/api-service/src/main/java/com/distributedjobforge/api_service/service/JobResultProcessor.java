@@ -22,6 +22,7 @@ public class JobResultProcessor {
     private final JobExecutionRepo jobExecutionRepo;
     private final RetryService retryService;
     private final JobEventPublisher jobEventPublisher;
+    private  final  DagProgressionService dagProgressionService ;
 
     @Transactional
     public void processResult(JobResultMessage resultMessage) {
@@ -49,6 +50,7 @@ public class JobResultProcessor {
             storeResultPayload(job, resultMessage);
             jobRepo.save(job);
             log.info("Job {} SUCCEEDED on attempt {}", job.getId(), resultMessage.attempt());
+            dagProgressionService.onJobSucceeded(job.getId());
             return;
         }
 
