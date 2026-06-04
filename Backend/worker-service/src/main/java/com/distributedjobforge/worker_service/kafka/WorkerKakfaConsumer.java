@@ -1,11 +1,10 @@
 package com.distributedjobforge.worker_service.kafka;
-
-
 import com.distributedjobforge.worker_service.domain.JobType;
 import com.distributedjobforge.worker_service.executor.ExecutionResult;
 import com.distributedjobforge.worker_service.executor.HttpExecutor;
 import com.distributedjobforge.worker_service.executor.JavaClassExecutor;
 import com.distributedjobforge.worker_service.executor.ShellExecutor;
+import com.distributedjobforge.worker_service.registration.WorkerRegistrationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,15 +24,20 @@ public class WorkerKakfaConsumer {
     private final HttpExecutor httpExecutor;
     private final JavaClassExecutor javaClassExecutor;
     private final ResultPublisher resultPublisher;
+    private  final WorkerRegistrationService workerRegistrationService ;
 
     @Value("${worker.id:worker-local}")
     private String workerId;
 
     @KafkaListener(topics = "job.pending", groupId = "djf-workers")
+
     public void onJobPending(JobPendingMessage message, Acknowledgment ack) {
+
+
         log.info("Received job: jobId={}, type={}, attempt={}, priority={}",
                 message.jobId(), message.type(), message.attempt(), message.priority());
 
+        workerRegistrationService.markInProgress(message.jobId());
         try {
             ExecutionResult result = executeJob(message);
 
@@ -54,8 +58,6 @@ public class WorkerKakfaConsumer {
             );
 
             resultPublisher.publishResult(resultMessage);
-
-            // Manually ack only after the result is published
             ack.acknowledge();
             log.info("Job {} processed and acknowledged", message.jobId());
 
@@ -81,6 +83,10 @@ public class WorkerKakfaConsumer {
             );
             resultPublisher.publishResult(errorResult);
             ack.acknowledge();
+
+        }
+        finally {
+            workerRegistrationService.markDone(message.jobId());
         }
     }
 
