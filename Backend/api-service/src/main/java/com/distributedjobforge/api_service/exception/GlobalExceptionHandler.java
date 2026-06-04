@@ -56,8 +56,9 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of("INTERNAL_ERROR", "An unexpected error occurred"));
     }
     @ExceptionHandler(CycleDepededncyException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorResponse handleCyclicDependency(CycleDepededncyException ex) {
-        return ErrorResponse.of("CYCLE_DETECTED", ex.getMessage());
+    public ResponseEntity<ErrorResponse> handleCyclicDependency(CycleDepededncyException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.of("CYCLE_DETECTED", ex.getMessage()));
     }
 }
