@@ -11,6 +11,8 @@ public class VirtualThreadConfig {
 
     @Bean("virtualThreadExecutor")
     public ExecutorService virtualThreadExecutor(){
+
         return Executors.newVirtualThreadPerTaskExecutor();
+
     }
 }
