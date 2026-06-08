@@ -109,6 +109,33 @@ services:
     networks:
       - djf-net
 
+  scheduler-service:
+    build:
+      context: ./Backend/scheduler-service
+      dockerfile: Dockerfile
+    container_name: djf-scheduler-service
+    ports:
+      - "${SCHEDULER_SERVICE_PORT:-8081}:8081"
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SCHEDULER_SERVICE_PORT: 8081
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - djf-net
+
 
 volumes:
   mysql_data:
