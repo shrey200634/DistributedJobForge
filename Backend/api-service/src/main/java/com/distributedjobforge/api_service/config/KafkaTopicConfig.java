@@ -32,4 +32,12 @@ public class KafkaTopicConfig {
                 .build();
 
     }
+
+    @Bean
+    public NewTopic jobCompletedTopic() {
+        return TopicBuilder.name("job.completed")
+                .partitions(6)
+                .replicas(1)
+                .build();
+    }
 }

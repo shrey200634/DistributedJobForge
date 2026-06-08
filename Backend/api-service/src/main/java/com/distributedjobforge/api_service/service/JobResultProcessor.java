@@ -8,6 +8,7 @@ import com.distributedjobforge.api_service.kafka.JobEventPublisher;
 import com.distributedjobforge.api_service.kafka.JobResultMessage;
 import com.distributedjobforge.api_service.repository.JobExecutionRepo;
 import com.distributedjobforge.api_service.repository.JobRepo;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +23,7 @@ public class JobResultProcessor {
     private final JobExecutionRepo jobExecutionRepo;
     private final RetryService retryService;
     private final JobEventPublisher jobEventPublisher;
-    private  final  DagProgressionService dagProgressionService ;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Transactional("transactionManager")
     public void processResult(JobResultMessage resultMessage) {
@@ -50,8 +51,8 @@ public class JobResultProcessor {
             storeResultPayload(job, resultMessage);
             jobRepo.save(job);
             log.info("Job {} SUCCEEDED on attempt {}", job.getId(), resultMessage.attempt());
-            dagProgressionService.onJobSucceeded(job.getId());
-            return;
+            kafkaTemplate.send("job.completed", job.getId().toString(), job.getId().toString());
+            log.info("Published job.completed event for jobId={}", job.getId());            return;
         }
 
         // FAILURE path → decide retry vs DLQ

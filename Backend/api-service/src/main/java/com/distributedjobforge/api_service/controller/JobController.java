@@ -1,7 +1,6 @@
 package com.distributedjobforge.api_service.controller;
 
 
-import com.distributedjobforge.api_service.dto.BatchJobSubmitRequest;
 import com.distributedjobforge.api_service.dto.JobResponse;
 import com.distributedjobforge.api_service.dto.JobSubmitRequest;
 import com.distributedjobforge.api_service.service.JobService;
@@ -46,8 +45,5 @@ public class JobController {
 
     }
 
-    @PostMapping("/batch")
-    public  ResponseEntity<List<JobResponse>> submitBatch (@RequestBody BatchJobSubmitRequest request){
-        return ResponseEntity.ok(jobService.submitBatch(request));
-    }
+
 }
