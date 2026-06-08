@@ -4,7 +4,7 @@ import com.distributedjobforge.api_service.domain.Job;
 import com.distributedjobforge.api_service.domain.JobStatus;
 import com.distributedjobforge.api_service.kafka.JobEventPublisher;
 import com.distributedjobforge.api_service.repository.JobRepo;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -25,9 +25,9 @@ public class StartupReconciliationService {
     //unblock and republish them
 
     @EventListener(ApplicationReadyEvent.class)
-    @Transactional
+    @Transactional("transactionManager")
     public  void reconcile(){
-        List<Job> blockedJob = jobRepo.findByStatus(JobStatus.BLOCKED);
+        List<Job> blockedJob = jobRepo.findByStatusWithDependencies(JobStatus.BLOCKED);
         if (blockedJob.isEmpty()){
             log.info("Startup reconciliation: no BLOCKED jobs found");
             return;

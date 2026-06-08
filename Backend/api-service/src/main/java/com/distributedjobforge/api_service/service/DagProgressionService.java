@@ -4,7 +4,7 @@ import com.distributedjobforge.api_service.domain.Job;
 import com.distributedjobforge.api_service.domain.JobStatus;
 import com.distributedjobforge.api_service.kafka.JobEventPublisher;
 import com.distributedjobforge.api_service.repository.JobRepo;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,7 +19,7 @@ public class DagProgressionService {
     private final JobRepo jobRepo;
     private  final JobEventPublisher jobEventPublisher ;
 
-    @Transactional
+    @Transactional("transactionManager")
     public  void onJobSucceeded(UUID completedJobId ){
         List<Job> children = jobRepo.findChildrenOf(completedJobId);
         if (children.isEmpty()){

@@ -8,7 +8,7 @@ import com.distributedjobforge.api_service.kafka.JobEventPublisher;
 import com.distributedjobforge.api_service.kafka.JobResultMessage;
 import com.distributedjobforge.api_service.repository.JobExecutionRepo;
 import com.distributedjobforge.api_service.repository.JobRepo;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,7 +24,7 @@ public class JobResultProcessor {
     private final JobEventPublisher jobEventPublisher;
     private  final  DagProgressionService dagProgressionService ;
 
-    @Transactional
+    @Transactional("transactionManager")
     public void processResult(JobResultMessage resultMessage) {
         Job job = jobRepo.findById(resultMessage.jobId())
                 .orElseThrow(() -> new JobNotFoundException(resultMessage.jobId()));

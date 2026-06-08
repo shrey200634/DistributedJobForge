@@ -22,7 +22,7 @@ public class DeadWorkerWatchdog {
     private final JobEventPublisher jobEventPublisher;
 
     @Scheduled(fixedDelay = 15_000)
-    @Transactional
+    @Transactional("transactionManager")
     public void checkForDeadWorkers() {
 
         Set<Object> activeWorkers = redissonClient

@@ -113,7 +113,6 @@ public class WorkerKakfaConsumer {
             }
         }
     }
-
     private ExecutionResult executeJob(JobPendingMessage message) {
         if (message.type() == JobType.SHELL) {
             return shellExecutor.execute(

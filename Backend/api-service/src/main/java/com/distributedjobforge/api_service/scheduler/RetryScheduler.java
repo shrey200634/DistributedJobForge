@@ -27,7 +27,7 @@ public class RetryScheduler {
 
 
     @Scheduled(fixedDelay = 1000)
-    @Transactional
+    @Transactional("transactionManager")
     public void pollDueRetries() {
         RScoredSortedSet<String> schedule =
                 redissonClient.getScoredSortedSet(RetryService.RETRY_SCHEDULE_KEY);

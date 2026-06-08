@@ -31,5 +31,8 @@ public interface  JobRepo   extends JpaRepository<Job , UUID> {
     long countUnfinishedParents(@Param("parentIds") List<UUID> parentIds,
                                 @Param("succeeded") JobStatus succeeded);
 
+    @Query("SELECT DISTINCT j FROM Job j LEFT JOIN FETCH j.dependsOn WHERE j.status = :status")
+    List<Job> findByStatusWithDependencies(@Param("status") JobStatus status);
+
 
 }
