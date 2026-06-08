@@ -1,16 +1,15 @@
 package com.distributedjobforge.scheduler_service.scheduler;
 
-
 import com.distributedjobforge.scheduler_service.domain.Job;
 import com.distributedjobforge.scheduler_service.domain.JobStatus;
 import com.distributedjobforge.scheduler_service.kafka.JobEventPublisher;
 import com.distributedjobforge.scheduler_service.repository.JobRepo;
-import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -19,48 +18,43 @@ import java.util.List;
 @RequiredArgsConstructor
 public class StartupReconciliationService {
 
-    private final JobRepo jobRepo ;
-    private  final JobEventPublisher jobEventPublisher ;
-    // on every startup fins blocked jobs whose parents are all successful ,
-    // these were stranded by a crash between parents success and child dispatch
-    //unblock and republish them
+    private final JobRepo jobRepo;
+    private final JobEventPublisher jobEventPublisher;
 
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
-    public  void reconcile(){
+    public void reconcile() {
         List<Job> blockedJob = jobRepo.findByStatusWithDependencies(JobStatus.BLOCKED);
-        if (blockedJob.isEmpty()){
+        if (blockedJob.isEmpty()) {
             log.info("Startup reconciliation: no BLOCKED jobs found");
             return;
-
         }
+
         log.info("Startup reconciliation: checking {} BLOCKED job(s)", blockedJob.size());
-        int requeued = 0 ;
-        for ( Job job : blockedJob ){
-            if ( job.getDependsOn() == null || job.getDependsOn().isEmpty()){
+        int requeued = 0;
+
+        for (Job job : blockedJob) {
+            if (job.getDependsOn() == null || job.getDependsOn().isEmpty()) {
                 job.setStatus(JobStatus.PENDING);
                 jobRepo.save(job);
                 jobEventPublisher.publishJobPending(job);
-                requeued++ ;
+                requeued++;
                 log.warn("Job {} was BLOCKED with no parents — fixed and re-queued", job.getId());
                 continue;
             }
 
             long stillMatching = jobRepo.countUnfinishedParents(
-                    job.getDependsOn() , JobStatus.SUCCEEDED
+                    job.getDependsOn(), JobStatus.SUCCEEDED
             );
 
-            if (stillMatching ==0){
+            if (stillMatching == 0) {
                 job.setStatus(JobStatus.PENDING);
                 jobRepo.save(job);
                 jobEventPublisher.publishJobPending(job);
                 requeued++;
                 log.info("Reconciled stranded job {} — all parents done, re-queued", job.getId());
-
-
             }
         }
-
 
         log.info("Startup reconciliation complete: {}/{} jobs re-queued",
                 requeued, blockedJob.size());

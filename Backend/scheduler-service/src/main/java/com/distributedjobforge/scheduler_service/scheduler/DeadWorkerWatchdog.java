@@ -10,9 +10,11 @@ import org.redisson.api.RedissonClient;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -21,18 +23,22 @@ public class DeadWorkerWatchdog {
     private final RedissonClient redissonClient;
     private final JobRepo jobRepo;
     private final JobEventPublisher jobEventPublisher;
+    private final LeaderElectionService leaderElectionService;
 
     @Scheduled(fixedDelay = 15_000)
     @Transactional
     public void checkForDeadWorkers() {
+        if (!leaderElectionService.isLeader()) return;
 
         Set<Object> activeWorkers = redissonClient
                 .<Object>getSet("workers:active").readAll();
         if (activeWorkers.isEmpty()) return;
+
         for (Object workerIdObj : activeWorkers) {
             String workerId = workerIdObj.toString();
             boolean alive = redissonClient.getBucket("workers:" + workerId).isExists();
             if (alive) continue;
+
             log.warn("Dead worker detected: {} — reassigning its in-progress jobs", workerId);
             Set<Object> inProgressJobIds = redissonClient
                     .<Object>getSet("jobs:in-progress:" + workerId).readAll();
