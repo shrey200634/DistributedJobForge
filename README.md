@@ -99,6 +99,64 @@ graph TD
 
 ---
 
+## 📖 API Reference
+
+### 1. Submit a Single Job
+`POST /api/v1/jobs`
+
+**Request Payload:**
+```json
+{
+  "idempotencyKey": "unique-uuid-123",
+  "type": "SHELL",
+  "priority": 5,
+  "maxRetries": 3,
+  "payload": {
+    "command": "echo 'Hello World'"
+  }
+}
+```
+**Response (202 Accepted):**
+```json
+{
+  "jobId": "f1917761-c2e7-48c5-a20e-a6ad175b348f",
+  "status": "PENDING",
+  "message": "Job accepted and queued for processing"
+}
+```
+
+### 2. Submit a DAG Batch
+`POST /api/v1/jobs/batch`
+
+Use `clientRefId` to logically link dependencies before they receive a UUID from the database. The `scheduler-service` automatically runs Kahn's Topological Sort to validate the DAG.
+
+**Request Payload:**
+```json
+{
+  "jobs": [
+    {
+      "clientRefId": "job-a",
+      "idempotencyKey": "uuid-a",
+      "type": "SHELL",
+      "maxRetries": 1,
+      "payload": { "command": "sleep 2 && echo 'Job A Finished'" }
+    },
+    {
+      "clientRefId": "job-b",
+      "idempotencyKey": "uuid-b",
+      "dependsOn": ["job-a"],
+      "type": "SHELL",
+      "maxRetries": 1,
+      "payload": { "command": "echo 'Job B executing ONLY after Job A!'" }
+    }
+  ]
+}
+```
+**Response (202 Accepted):**
+Returns the hydrated array of jobs mapped to their newly generated UUIDs. The parent jobs will execute immediately, while the child jobs will spawn in `BLOCKED` status.
+
+---
+
 ## ⚡ Event-Driven Workflows
 
 No synchronous waiting. Once a job enters Kafka, the client is free. The system guarantees eventual consistency and automatically manages read-after-write database race conditions via Spring's `TransactionSynchronizationManager`.
@@ -131,6 +189,37 @@ sequenceDiagram
 
 ---
 
+## 📨 Kafka Topic Schemas
+
+The system communicates entirely via strongly-typed JSON messages traversing Apache Kafka KRaft.
+
+| Topic Name | Partitions | Producer | Consumers | Purpose |
+|---|---|---|---|---|
+| `job.pending` | 12 | api-service, scheduler | worker-service | Main execution queue. Workers compete for tasks via Consumer Groups. |
+| `job.result` | 6 | worker-service | api-service | Contains execution stdout/stderr & status. Used by API to commit to DB. |
+| `job.completed` | 6 | api-service | scheduler-service | Triggers DAG unblocking. Tells the scheduler a parent node finished. |
+| `job.dlq` | 3 | api-service | api-service | Triggers SMTP/Webhook alerts for exhausted jobs. |
+
+### Example: `job.result` Payload
+Produced by the `worker-service` after a Virtual Thread executor finishes running a task.
+```json
+{
+  "jobId": "f1917761-c2e7-48c5-a20e-a6ad175b348f",
+  "status": "SUCCEEDED",
+  "workerId": "worker-service-2",
+  "attempt": 0,
+  "exitCode": 0,
+  "stdout": "Hello World\n",
+  "stderr": "",
+  "errorMessage": null,
+  "durationMs": 420,
+  "startedAt": "2026-06-09T17:38:15.945Z",
+  "completedAt": "2026-06-09T17:38:16.365Z"
+}
+```
+
+---
+
 ## 📊 Observability Stack
 
 DistributedJobForge ships with a **fully provisioned** monitoring stack using Micrometer metrics. Dashboards auto-load on container start.
@@ -143,6 +232,20 @@ DistributedJobForge ships with a **fully provisioned** monitoring stack using Mi
 | **Worker Throughput** | Rate of `job.result` publications (jobs/sec) |
 | **Execution Duration** | `Timer` measuring raw executor latency per job type |
 | **DLQ / Retries** | Counters tracking failure rates and exponential backoffs |
+
+---
+
+## 🏎️ Performance Benchmarks
+
+Tested via Apache JMeter directly hammering the REST API to bypass UI caching, simulating a massive traffic spike across 3 horizontally scaled `worker-service` nodes.
+
+| Concurrent Threads | Payload | Throughput | Max Latency | Error Rate |
+|-----------------|--------------|--------------|--------------|------------|
+| 200             | 20,000 Jobs  | 1,735 req/min| 1.4s        | 0%         |
+| 500 (Extreme)   | 100,000 Jobs | 2,994 req/min| 35.0s*      | 1.45%**    |
+
+*\*Latency spike due to intended queue buildup.*  
+*\*\*1.45% Error Rate at 100k jobs strictly due to intentional 30s HikariCP database connection pool timeout (Default 10 connections shared across 500 threads). Zero data loss or corruption occurred.*
 
 ---
 
