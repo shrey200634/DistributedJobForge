@@ -84,12 +84,12 @@ public class JobService {
         }
         log.info("Job created: id={}, type={}, status={}, priority={}",
                 job.getId(), job.getType(), job.getStatus(), job.getPriority());
+        registry.counter("djf.jobs.submitted").increment();
         return JobResponse.from(job);
     }
     public  JobResponse getJob (UUID jobId ){
         Job job = repo.findById(jobId)
                 .orElseThrow(()-> new JobNotFoundException(jobId));
-        registry.counter("djf.jobs.submitted").increment();
         return  JobResponse.from( job);
     }
 
