@@ -12,6 +12,8 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -55,8 +57,15 @@ public class JobResultProcessor {
             storeResultPayload(job, resultMessage);
             jobRepo.save(job);
             log.info("Job {} SUCCEEDED on attempt {}", job.getId(), resultMessage.attempt());
-            kafkaTemplate.send("job.completed", job.getId().toString(), job.getId().toString());
-            log.info("Published job.completed event for jobId={}", job.getId());
+            
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    kafkaTemplate.send("job.completed", job.getId().toString(), job.getId().toString());
+                    log.info("Published job.completed event for jobId={}", job.getId());
+                }
+            });
+            
             meterRegistry.counter("djf.jobs.completed").increment();
             return;
         }

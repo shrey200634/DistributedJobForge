@@ -8,12 +8,12 @@ export default defineConfig({
   server: {
     proxy: {
       '/prometheus': {
-        target: 'http://localhost:9090',
+        target: 'http://prometheus:9090',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/prometheus/, '')
       },
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://api-service:8080',
         changeOrigin: true
       }
     }

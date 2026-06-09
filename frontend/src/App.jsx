@@ -18,7 +18,7 @@ const Dashboard = () => {
       const queries = {
         submitted: '/prometheus/api/v1/query?query=djf_jobs_submitted_total',
         completed: '/prometheus/api/v1/query?query=djf_jobs_completed_total',
-        dlq: '/prometheus/api/v1/query?query=djf_jobs_dlq_total',
+        dlq: '/prometheus/api/v1/query?query=djf_dlq_size_total',
         throughput: '/prometheus/api/v1/query?query=sum(rate(djf_jobs_completed_total[1m]))'
       };
 
@@ -55,7 +55,7 @@ const Dashboard = () => {
 
   const triggerTestJob = async () => {
     try {
-      await axios.post('/api/api/v1/jobs', {
+      await axios.post('/api/v1/jobs', {
         idempotencyKey: crypto.randomUUID(),
         type: 'SHELL',
         priority: 5,
@@ -78,8 +78,8 @@ const Dashboard = () => {
           {value.toLocaleString()}
         </h3>
       </div>
-      <div className={`p-4 rounded-full ${colorClass} bg-opacity-10`}>
-        <Icon className={`w-8 h-8 ${colorClass.replace('bg-', 'text-').replace('/10', '')}`} />
+      <div className={`p-4 rounded-full ${colorClass}`}>
+        <Icon className="w-8 h-8" />
       </div>
     </div>
   );
@@ -116,25 +116,25 @@ const Dashboard = () => {
           title="Jobs Submitted" 
           value={metrics.submitted} 
           icon={Activity} 
-          colorClass="bg-blue-500 text-blue-500" 
+          colorClass="bg-blue-500/20 text-blue-400" 
         />
         <StatCard 
           title="Jobs Completed" 
           value={metrics.completed} 
           icon={CheckCircle} 
-          colorClass="bg-emerald-500 text-emerald-500" 
+          colorClass="bg-emerald-500/20 text-emerald-400" 
         />
         <StatCard 
           title="Dead Letter Queue" 
           value={metrics.dlq} 
           icon={XCircle} 
-          colorClass="bg-red-500 text-red-500" 
+          colorClass="bg-red-500/20 text-red-400" 
         />
         <StatCard 
           title="Current Throughput (1m)" 
           value={`${metrics.throughput} /sec`} 
           icon={Clock} 
-          colorClass="bg-purple-500 text-purple-500" 
+          colorClass="bg-purple-500/20 text-purple-400" 
         />
       </div>
 
