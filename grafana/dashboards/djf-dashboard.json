@@ -1,0 +1,71 @@
+{
+  "title": "DistributedJobForge Metrics",
+  "uid": "djf-metrics",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Jobs Submitted",
+      "targets": [
+        { "expr": "djf_jobs_submitted_total" }
+      ],
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 0 }
+    },
+    {
+      "type": "stat",
+      "title": "Jobs Completed",
+      "targets": [
+        { "expr": "djf_jobs_completed_total" }
+      ],
+      "gridPos": { "h": 8, "w": 6, "x": 6, "y": 0 }
+    },
+    {
+      "type": "stat",
+      "title": "DLQ Count",
+      "targets": [
+        { "expr": "djf_dlq_size_total" }
+      ],
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 0 }
+    },
+    {
+      "type": "stat",
+      "title": "Retries",
+      "targets": [
+        { "expr": "djf_retry_count_total" }
+      ],
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 0 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Avg Execution Duration",
+      "targets": [
+        { "expr": "rate(djf_execution_duration_seconds_sum[1m]) / rate(djf_execution_duration_seconds_count[1m])" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Worker Throughput (jobs/sec)",
+      "targets": [
+        { "expr": "rate(djf_jobs_executed_total[1m])" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Submission Rate (jobs/sec)",
+      "targets": [
+        { "expr": "rate(djf_jobs_submitted_total[1m])" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 }
+    },
+    {
+      "type": "stat",
+      "title": "DAG Jobs Unblocked",
+      "targets": [
+        { "expr": "djf_dag_unblocked_total" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 }
+    }
+  ],
+  "schemaVersion": 38
+}

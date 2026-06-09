@@ -25,7 +25,7 @@ public class JobCompletedConsumer {
             }
     )
     public void onJobCompleted(ConsumerRecord<String, String> record) {
-        UUID jobId = UUID.fromString(record.value());
+        UUID jobId = UUID.fromString(record.key());
         log.info("Received job.completed event for jobId={}", jobId);
         dagProgressionService.onJobSucceeded(jobId);
     }

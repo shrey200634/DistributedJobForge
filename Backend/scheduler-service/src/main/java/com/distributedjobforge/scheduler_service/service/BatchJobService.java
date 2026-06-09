@@ -25,6 +25,7 @@ public class BatchJobService {
     private final JobRepo repo;
     private final JobEventPublisher jobEventPublisher;
     private final DagResolverService dagResolverService;
+    private final io.micrometer.core.instrument.MeterRegistry meterRegistry;
 
     @Transactional
     public List<JobResponse> submitBatch(BatchJobSubmitRequest request) {
@@ -76,6 +77,8 @@ public class BatchJobService {
                     }
                 }
         );
+
+        meterRegistry.counter("djf.jobs.submitted").increment(request.jobs().size());
 
         return savedByRef.values().stream()
                 .map(JobResponse::from)
