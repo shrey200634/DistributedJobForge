@@ -1,5 +1,7 @@
 package com.distributedjobforge.api_service.service;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RAtomicLong;
@@ -18,6 +20,7 @@ public class RetryService {
     public static final String RETRY_SCHEDULE_KEY = "jobs:retry_schedule";
 
     private final RedissonClient redissonClient;
+    private  final MeterRegistry registry;
 
 
     public RetryDecision scheduleRetryIfPossible(String jobId, int currentAttempt, int maxRetries) {
@@ -45,6 +48,8 @@ public class RetryService {
         // Schedule the retry: ZSET scored by ready-time
         RScoredSortedSet<String> schedule = redissonClient.getScoredSortedSet(RETRY_SCHEDULE_KEY);
         schedule.add(readyAtEpochMs, jobId);
+        registry.counter("djf.retry.count").increment();
+
 
         log.info("Job {} scheduled for retry: attempt={}, delay={}s, readyAt={}",
                 jobId, attempt, delaySeconds, readyAtEpochMs);

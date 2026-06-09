@@ -4,6 +4,8 @@ import com.distributedjobforge.scheduler_service.domain.Job;
 import com.distributedjobforge.scheduler_service.domain.JobStatus;
 import com.distributedjobforge.scheduler_service.kafka.JobEventPublisher;
 import com.distributedjobforge.scheduler_service.repository.JobRepo;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -20,6 +22,8 @@ public class StartupReconciliationService {
 
     private final JobRepo jobRepo;
     private final JobEventPublisher jobEventPublisher;
+    private final MeterRegistry registry ;
+
 
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
@@ -39,6 +43,8 @@ public class StartupReconciliationService {
                 jobRepo.save(job);
                 jobEventPublisher.publishJobPending(job);
                 requeued++;
+                registry.counter("djf.reconciliation.requeued").increment();
+
                 log.warn("Job {} was BLOCKED with no parents — fixed and re-queued", job.getId());
                 continue;
             }
@@ -52,6 +58,8 @@ public class StartupReconciliationService {
                 jobRepo.save(job);
                 jobEventPublisher.publishJobPending(job);
                 requeued++;
+                registry.counter("djf.reconciliation.requeued").increment();
+
                 log.info("Reconciled stranded job {} — all parents done, re-queued", job.getId());
             }
         }

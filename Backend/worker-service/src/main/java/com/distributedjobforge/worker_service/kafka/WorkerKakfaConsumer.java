@@ -5,6 +5,7 @@ import com.distributedjobforge.worker_service.executor.HttpExecutor;
 import com.distributedjobforge.worker_service.executor.JavaClassExecutor;
 import com.distributedjobforge.worker_service.executor.ShellExecutor;
 import com.distributedjobforge.worker_service.registration.WorkerRegistrationService;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RedissonClient;
@@ -31,6 +32,7 @@ public class WorkerKakfaConsumer {
     private final ResultPublisher resultPublisher;
     private  final WorkerRegistrationService workerRegistrationService ;
     private final RedissonClient redissonClient ;
+  private  final MeterRegistry registry;
 
     @Value("${worker.id:worker-local}")
     private String workerId;
@@ -60,7 +62,10 @@ public class WorkerKakfaConsumer {
 
         workerRegistrationService.markInProgress(jobId);
         try {
+            long startTime = System.nanoTime();
             ExecutionResult result = executeJob(message);
+            registry.timer("djf.execution.duration").record(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
+            registry.counter("djf.jobs.executed").increment();
 
             JobResultMessage resultMessage = new JobResultMessage(
                     "1.0",

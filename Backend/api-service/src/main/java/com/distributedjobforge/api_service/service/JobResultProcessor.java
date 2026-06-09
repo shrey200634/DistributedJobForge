@@ -8,6 +8,8 @@ import com.distributedjobforge.api_service.kafka.JobEventPublisher;
 import com.distributedjobforge.api_service.kafka.JobResultMessage;
 import com.distributedjobforge.api_service.repository.JobExecutionRepo;
 import com.distributedjobforge.api_service.repository.JobRepo;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,8 @@ public class JobResultProcessor {
     private final RetryService retryService;
     private final JobEventPublisher jobEventPublisher;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final MeterRegistry meterRegistry;
+
 
     @Transactional("transactionManager")
     public void processResult(JobResultMessage resultMessage) {
@@ -52,7 +56,9 @@ public class JobResultProcessor {
             jobRepo.save(job);
             log.info("Job {} SUCCEEDED on attempt {}", job.getId(), resultMessage.attempt());
             kafkaTemplate.send("job.completed", job.getId().toString(), job.getId().toString());
-            log.info("Published job.completed event for jobId={}", job.getId());            return;
+            log.info("Published job.completed event for jobId={}", job.getId());
+            meterRegistry.counter("djf.jobs.completed").increment();
+            return;
         }
 
         // FAILURE path → decide retry vs DLQ
@@ -85,6 +91,7 @@ public class JobResultProcessor {
                     authoritativeAttempt,
                     resultMessage.errorMessage()
             );
+            meterRegistry.counter("djf.dlq.size").increment();
             log.warn("Job {} sent to DLQ after {} attempts", job.getId(), authoritativeAttempt);
         }
     }

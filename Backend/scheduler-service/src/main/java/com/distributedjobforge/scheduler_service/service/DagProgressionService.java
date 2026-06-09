@@ -5,6 +5,8 @@ import com.distributedjobforge.scheduler_service.domain.Job;
 import com.distributedjobforge.scheduler_service.domain.JobStatus;
 import com.distributedjobforge.scheduler_service.kafka.JobEventPublisher;
 import com.distributedjobforge.scheduler_service.repository.JobRepo;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +21,7 @@ import java.util.UUID;
 public class DagProgressionService {
     private final JobRepo jobRepo;
     private  final JobEventPublisher jobEventPublisher ;
+    private   final MeterRegistry registry ;
 
     @Transactional
     public  void onJobSucceeded(UUID completedJobId ){
@@ -41,6 +44,8 @@ public class DagProgressionService {
                 child.setStatus(JobStatus.PENDING);
                 jobRepo.save(child);
                 jobEventPublisher.publishJobPending(child);
+                registry.counter("djf.dag.unblocked").increment();
+
                 log.info("Unblocked job {} — all parents done, published to job.pending",
                         child.getId());
 

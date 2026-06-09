@@ -9,6 +9,8 @@ import com.distributedjobforge.api_service.exception.InvalidJobStateException;
 import com.distributedjobforge.api_service.exception.JobNotFoundException;
 import com.distributedjobforge.api_service.kafka.JobEventPublisher;
 import com.distributedjobforge.api_service.repository.JobRepo;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +31,10 @@ public class JobService {
     private final JobRepo repo ;
     private final RedissonClient redissonClient ;
     private  final JobEventPublisher jobEventPublisher;
+    private  final MeterRegistry registry;
+
+
+
 
     @Transactional("transactionManager")
     public JobResponse submitJob(JobSubmitRequest request) {
@@ -63,10 +69,7 @@ public class JobService {
 
         job = repo.save(job);
 
-        // Store idempotency key in Redis with 24h TTL
         bucket.set(job.getId().toString(), 24, TimeUnit.HOURS);
-
-        // Publish to Kafka AFTER DB commits — prevents the crash-between-save-and-publish gap
         if (job.getStatus() == JobStatus.PENDING) {
             final Job finalJob = job;
             TransactionSynchronizationManager.registerSynchronization(
@@ -79,19 +82,18 @@ public class JobService {
                     }
             );
         }
-
         log.info("Job created: id={}, type={}, status={}, priority={}",
                 job.getId(), job.getType(), job.getStatus(), job.getPriority());
-
         return JobResponse.from(job);
     }
     public  JobResponse getJob (UUID jobId ){
         Job job = repo.findById(jobId)
                 .orElseThrow(()-> new JobNotFoundException(jobId));
-
+        registry.counter("djf.jobs.submitted").increment();
         return  JobResponse.from( job);
-
     }
+
+
     @Transactional("transactionManager")
     public  JobResponse cancelJob ( UUID jobId ){
         Job job = repo.findById(jobId)
