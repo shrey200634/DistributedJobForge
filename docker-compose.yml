@@ -136,9 +136,40 @@ services:
     networks:
       - djf-net
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: djf-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - api-service
+      - worker-service
+      - scheduler-service
+    networks:
+      - djf-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: djf-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - djf-net
+
 
 volumes:
   mysql_data:
+  grafana_data:
+
 
 networks:
   djf-net:

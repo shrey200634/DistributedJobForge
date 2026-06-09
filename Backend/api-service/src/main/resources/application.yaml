@@ -43,3 +43,12 @@ djf:
     webhook-url: ${DLQ_WEBHOOK_URL:}
     webhook-enabled: ${DLQ_WEBHOOK_ENABLED:true}
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}
+

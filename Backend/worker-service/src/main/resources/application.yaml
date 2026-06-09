@@ -30,3 +30,12 @@ redis:
 
 worker:
   id: ${HOSTNAME:worker-local}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}
