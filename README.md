@@ -101,7 +101,7 @@ graph TD
 
 ## 📖 API Reference
 
-### 1. Submit a Single Job
+### 1. Submit a Single Job.
 `POST /api/v1/jobs`
 
 **Request Payload:**
