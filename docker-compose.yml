@@ -112,9 +112,6 @@ services:
     build:
       context: ./Backend/scheduler-service
       dockerfile: Dockerfile
-    container_name: djf-scheduler-service
-    ports:
-      - "${SCHEDULER_SERVICE_PORT:-8081}:8081"
     environment:
       DB_HOST: mysql
       DB_PORT: 3306
